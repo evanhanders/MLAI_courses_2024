@@ -26,20 +26,25 @@ def main():
     test_sentences = sentences_pos + sentences_neg
     test_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
 
-
+    # Bag of words feature extractor
     feat_map = feature_extractor(vocab_list, tokenize)
     # You many replace this with a different feature extractor
+
+    # print(feat_map(test_sentences[0]))
 
     # feat_map = tfidf_extractor(vocab_list, tokenize, word_freq)
 
     # Preprocess the training data into features
 
     text2feat = data_processor(feat_map)
-    Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels, "train_data.npy")
+
+    # Save the processed data to a file -- uncomment if first time running
+    # Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels, "train_data.npy")
+
 
     # Load the saved Xtrain
-
-    #Xtrain = text2feat.load_data_from_file("train_data.npy")
+    Xtrain = text2feat.load_data_from_file("train_data.npy")
+    ytrain = y = np.array(train_labels)
 
 
 
@@ -51,7 +56,8 @@ def main():
     classifier1 = classifier_agent(feat_map,params)
     classifier1.train_gd(Xtrain,ytrain,niter,0.01,RAW_TEXT=False)
 
-
+    import sys
+    sys.exit()
 
 
     # train with SGD

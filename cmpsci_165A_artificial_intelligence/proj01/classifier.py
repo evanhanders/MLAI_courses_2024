@@ -15,7 +15,7 @@ def load_data(file_name):
     @return:
      a list of sentences
     '''
-    with open(file_name, "r") as file:
+    with open(file_name, "r", encoding='latin-1') as file:
         sentences = file.readlines()
     return sentences
 
@@ -46,15 +46,22 @@ class feature_extractor:
         :return: The feature vector in the form of a "sparse.csc_array" with shape = (d,1)
         '''
 
-        # TODO ======================== YOUR CODE HERE =====================================
-        # Hint 1:  there are multiple ways of instantiating a sparse csc matrix.
-        #  Do NOT construct a dense numpy.array then convert to sparse.csc_array. That will defeat its purpose.
+        #Add an unknown word token
+        tokens = [self.vocab_dict[tok] if tok in self.vocab else self.d for tok in tokenize(sentence)]
+        row, data = np.unique(tokens, return_counts = True)
+        col = np.zeros_like(row)
 
-        # Hint 2:  There might be words from the input sentence not in the vocab_dict when we try to use this.
+        x = sparse.csc_matrix((data, (row, col)), shape=(self.d+1,1))
 
-        # Hint 3:  Python's standard library: Collections.Counter might be useful
+        # # TODO ======================== YOUR CODE HERE =====================================
+        # # Hint 1:  there are multiple ways of instantiating a sparse csc matrix.
+        # #  Do NOT construct a dense numpy.array then convert to sparse.csc_array. That will defeat its purpose.
 
-        x = sparse.csc_array(shape=(3,1)) # please modify this. 3 is not the right dimension.
+        # # Hint 2:  There might be words from the input sentence not in the vocab_dict when we try to use this.
+
+        # # Hint 3:  Python's standard library: Collections.Counter might be useful
+
+        # x = sparse.csc_array((self.d,1)) # please modify this. 3 is not the right dimension.
 
         # TODO =============================================================================
         return x
@@ -333,6 +340,7 @@ class classifier_agent():
 
         for i in range(nepoch):
             for j in range(len(ytrain)):
+                pass
 
             # TODO ======================== YOUR CODE HERE =====================================
             # You need to iteratively update self.params
