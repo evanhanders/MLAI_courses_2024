@@ -152,14 +152,17 @@ class classifier_agent():
             self.params = np.array([0.0 for i in range(d)])
 
         # TODO ======================== YOUR CODE HERE =====================================
-        s = np.zeros(shape=m)  # this is the desired type and shape for the output
+        # s = np.zeros(shape=m)  # this is the desired type and shape for the output
+
+        print(self.params@X)
+        return (self.params@X)
 
         # the score function is NOT a soft probabilistic prediction.
         # It is the score the classifier used to compare different classes,
         # e.g., for linear classifier it is the weighted linear combination of the features
         #       in decision tree classifiers, it is the voting score at each leaf node.
         # TODO =============================================================================
-        return s
+        # return s
 
 
 
@@ -176,14 +179,18 @@ class classifier_agent():
 
         # TODO ======================== YOUR CODE HERE =====================================
         # This should be a simple but useful function.
-        preds = np.zeros(shape=X.shape[1])
+        # preds = np.zeros(shape=X.shape[1])
+        score = self.score_function(X)
+        if RAW_TEXT:
+            return score
+        return score > 0
 
 
         # Tip:   Read the required format of the predictions.
 
         # TODO =============================================================================
 
-        return preds
+        # return preds
 
 
 
@@ -203,10 +210,12 @@ class classifier_agent():
         # TODO ======================== YOUR CODE HERE =====================================
         # The function should work for any integer m > 0.
         # You may wish to use self.predict
-        err =  0.0
+        # err =  0.0
+        preds = self.predict(X,RAW_TEXT=False)
+        return np.mean(preds != y)
         # TODO =============================================================================
 
-        return err
+        # return err
 
     def loss_function(self, X, y):
         '''
@@ -222,12 +231,17 @@ class classifier_agent():
         # The function should work for any integer m > 0.
         # You may first call score_function
 
-        loss =  0.0
+        yhat = np.array(self.score_function(X)).squeeze()
+        phat = np.exp(yhat)/(1+np.exp(yhat))
+        crosse_loss = -(y*np.log(phat) + (1-y)*np.log(1 - phat))
+        return np.mean(crosse_loss)
 
-        # TODO =============================================================================
+        # loss =  0.0
 
-        #return loss
-        return np.mean(loss)
+        # # TODO =============================================================================
+
+        # #return loss
+        # return np.mean(loss)
 
     def gradient(self, X, y):
         '''
@@ -242,9 +256,18 @@ class classifier_agent():
         # Hint 2:  vectorized operations will be orders of magnitudely faster than a for loop
         # Hint 3:  don't make X a dense matrix
 
-        grad = np.zeros_like(self.params)
-        # TODO =============================================================================
-        return grad
+        yhat = self.score_function(X)#[None,:] #shape m
+        phat = np.exp(yhat)/(1+np.exp(yhat)) #shape m
+        phat2 = phat**2
+        #Need shape d,m dl/dw.
+        dl_dw = X.multiply(-phat2*(y/phat - (1-y)/(1-phat)))
+        return np.mean(dl_dw, axis=1)
+
+        
+
+        # grad = np.zeros_like(self.params)
+        # # TODO =============================================================================
+        # return grad
 
 
 
@@ -282,13 +305,15 @@ class classifier_agent():
         for i in range(niter):
             # TODO ======================== YOUR CODE HERE =====================================
             # You need to iteratively update self.params
+            self.params = self.params - lr*self.gradient(Xtrain, ytrain)
+            # print(self.score_function(Xtrain))
 
 
             # TODO =============================================================================
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
 
-            if i%100 == 0:
+            if i%1 == 0:
                 print('iter =',i,'loss = ', train_losses[-1],
                   'error = ', train_errors[-1])
 
