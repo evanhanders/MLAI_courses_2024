@@ -56,9 +56,6 @@ def main():
     classifier1 = classifier_agent(feat_map,params)
     classifier1.train_gd(Xtrain,ytrain,niter,0.01,RAW_TEXT=False)
 
-    import sys
-    sys.exit()
-
 
     # train with SGD
     nepoch = 10
@@ -67,7 +64,6 @@ def main():
     params = np.array([0.0 for i in range(d)])
     classifier2 = classifier_agent(feat_map, params)
     classifier2.train_sgd(Xtrain, ytrain, nepoch, 0.001,RAW_TEXT=False)
-
 
     err1 = classifier1.eval_model(test_sentences,test_labels)
     err2 = classifier2.eval_model(test_sentences,test_labels)

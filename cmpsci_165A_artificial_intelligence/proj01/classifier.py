@@ -6,6 +6,8 @@ import numpy as np
 from collections import Counter
 import string
 
+EPSILON = 1e-10
+
 # utility functions we provides
 
 def load_data(file_name):
@@ -149,22 +151,8 @@ class classifier_agent():
         (d,m) = X.shape
         d1= self.params.shape[0]
         if d != d1:
-            self.params = np.array([0.0 for i in range(d)])
-
-        # TODO ======================== YOUR CODE HERE =====================================
-        # s = np.zeros(shape=m)  # this is the desired type and shape for the output
-
-        print(self.params@X)
-        return (self.params@X)
-
-        # the score function is NOT a soft probabilistic prediction.
-        # It is the score the classifier used to compare different classes,
-        # e.g., for linear classifier it is the weighted linear combination of the features
-        #       in decision tree classifiers, it is the voting score at each leaf node.
-        # TODO =============================================================================
-        # return s
-
-
+            self.params = np.random.rand(d)*1e-4
+        return (self.params * X)
 
     def predict(self, X, RAW_TEXT=False, RETURN_SCORE=False):
         '''
@@ -177,23 +165,10 @@ class classifier_agent():
         if RAW_TEXT:
             X = self.batch_feat_map(X)
 
-        # TODO ======================== YOUR CODE HERE =====================================
-        # This should be a simple but useful function.
-        # preds = np.zeros(shape=X.shape[1])
         score = self.score_function(X)
         if RAW_TEXT:
             return score
-        return score > 0
-
-
-        # Tip:   Read the required format of the predictions.
-
-        # TODO =============================================================================
-
-        # return preds
-
-
-
+        return score > 0.5
 
     def error(self, X, y, RAW_TEXT=False):
         '''
@@ -207,15 +182,12 @@ class classifier_agent():
             X = self.batch_feat_map(X)
             y = np.array(y)
 
-        # TODO ======================== YOUR CODE HERE =====================================
-        # The function should work for any integer m > 0.
-        # You may wish to use self.predict
-        # err =  0.0
         preds = self.predict(X,RAW_TEXT=False)
         return np.mean(preds != y)
-        # TODO =============================================================================
-
-        # return err
+    
+    def phat(self, yhat, offset=1):
+        """ Returns exp(yhat)/(1+exp(yhat))"""
+        return np.exp(yhat-offset)/(np.exp(-offset)+np.exp(yhat-offset))
 
     def loss_function(self, X, y):
         '''
@@ -226,22 +198,10 @@ class classifier_agent():
         :return:  a scalar, which denotes the mean of the loss functions on the m data points.
 
         '''
-
-        # TODO ======================== YOUR CODE HERE =====================================
-        # The function should work for any integer m > 0.
-        # You may first call score_function
-
         yhat = np.array(self.score_function(X)).squeeze()
-        phat = np.exp(yhat)/(1+np.exp(yhat))
-        crosse_loss = -(y*np.log(phat) + (1-y)*np.log(1 - phat))
+        phat = self.phat(yhat)
+        crosse_loss = -(y*np.log(phat + EPSILON) + (1-y)*np.log(1 - phat + EPSILON)) # = 
         return np.mean(crosse_loss)
-
-        # loss =  0.0
-
-        # # TODO =============================================================================
-
-        # #return loss
-        # return np.mean(loss)
 
     def gradient(self, X, y):
         '''
@@ -250,27 +210,11 @@ class classifier_agent():
         :param y: m dimensional vector (numpy.array) of true labels
         :return: Return an nd.array of size the same as self.params
         '''
-
-        # TODO ======================== YOUR CODE HERE =====================================
-        # Hint 1:  Use the score_function first
-        # Hint 2:  vectorized operations will be orders of magnitudely faster than a for loop
-        # Hint 3:  don't make X a dense matrix
-
-        yhat = self.score_function(X)#[None,:] #shape m
-        phat = np.exp(yhat)/(1+np.exp(yhat)) #shape m
-        phat2 = phat**2
-        #Need shape d,m dl/dw.
-        dl_dw = X.multiply(-phat2*(y/phat - (1-y)/(1-phat)))
-        return np.mean(dl_dw, axis=1)
-
-        
-
-        # grad = np.zeros_like(self.params)
-        # # TODO =============================================================================
-        # return grad
-
-
-
+        yhat = self.score_function(X) #shape m
+        phat = self.phat(yhat)
+        # print(phat.max(), phat.min(), X.shape)
+        dl_dw_part = -(y*(1-phat) - phat*(1-y))
+        return X*(dl_dw_part) / X.shape[1]
 
     def train_gd(self, train_sentences, train_labels, niter, lr=0.01, RAW_TEXT=True):
         '''
@@ -301,19 +245,14 @@ class classifier_agent():
         train_losses = [self.loss_function(Xtrain, ytrain)]
         train_errors = [self.error(Xtrain, ytrain)]
 
-        # Solution:
+
         for i in range(niter):
-            # TODO ======================== YOUR CODE HERE =====================================
-            # You need to iteratively update self.params
             self.params = self.params - lr*self.gradient(Xtrain, ytrain)
-            # print(self.score_function(Xtrain))
-
-
-            # TODO =============================================================================
+            
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
 
-            if i%1 == 0:
+            if i % 100 == 0:
                 print('iter =',i,'loss = ', train_losses[-1],
                   'error = ', train_errors[-1])
 
@@ -354,32 +293,23 @@ class classifier_agent():
         train_losses = [self.loss_function(Xtrain, ytrain)]
         train_errors = [self.error(Xtrain, ytrain)]
 
-
-        # First construct the dataset
-        # then train the model using SGD
-        # Solution
         sampler = 1/len(ytrain)
         niter = int(nepoch / sampler)
-
-        #params = sparse.csr_array(self.params)
+        print(Xtrain.shape, ytrain.shape)
 
         for i in range(nepoch):
+            indices = np.random.permutation(len(ytrain))
             for j in range(len(ytrain)):
-                pass
+                idx = indices[j]
+                # print(np.std(self.gradient(Xtrain[:,idx], ytrain[idx])))
+                self.params = self.params - lr*self.gradient(Xtrain[:,idx], ytrain[idx])
 
-            # TODO ======================== YOUR CODE HERE =====================================
-            # You need to iteratively update self.params
-            # You should use the following for selecting the index of one random data point.
-
-            # idx = np.random.choice(len(ytrain), 1)
-
-            # TODO =============================================================================
-            # logging
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
 
             print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
                   'error = ', train_errors[-1])
+        
 
 
         return train_losses, train_errors
